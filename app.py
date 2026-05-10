@@ -10,10 +10,22 @@ def img2text(url):
 
 # text2story
 def text2story(text):
-    story_generator = pipeline("text-generation", model="roneneldan/TinyStories-33M")
-    prompt = "Once upon a time, " + text + "."
-    story = story_generator(prompt, max_new_tokens=90, do_sample=True, temperature=0.8, top_p=0.9, repetition_penalty=1.3, no_repeat_ngram_size=3)
+    story_generator = pipeline("text2text-generation", model="google/flan-t5-base")
+
+    prompt = (
+        "Write a happy and simple children's story in 5 sentences. "
+        "The story should be friendly, warm, and suitable for kids aged 3 to 10. "
+        "Do not include scary, dangerous, or sad content. "
+        "Image description: " + text
+    )
+
+    story = story_generator(
+        prompt,
+        max_new_tokens=120
+    )
+
     story_text = story[0]["generated_text"]
+
     return story_text
 
 # text2audio
