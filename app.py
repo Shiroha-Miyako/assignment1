@@ -11,8 +11,8 @@ def img2text(url):
 # text2story
 def text2story(text):
     story_generator = pipeline("text2text-generation", model="google/flan-t5-base")
-    prompt = "Write a short, simple, happy story for children aged 3 to 10 in 50 to 100 words. Only output the story. The story is based on this image description: " + text
-    story = story_generator(prompt, max_new_tokens=120)
+    prompt = "Create a complete children's story with 5 sentences and 50 to 100 words. Do not only describe the picture. Include a beginning, a small problem, and a happy ending. Image description: " + text
+    story = story_generator(prompt, max_new_tokens=160, min_length=60, repetition_penalty=1.3)
     story_text = story[0]["generated_text"]
     return story_text
 
