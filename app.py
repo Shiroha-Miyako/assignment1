@@ -1,51 +1,75 @@
-from transformers import pipeline
-from PIL import Image
-from gtts import gTTS
-from io import BytesIO
-import streamlit as st
+# Program title: Storytelling App
 
-# function part
-# img2text
+# Import part
+import streamlit as st
+from transformers import pipeline
+
+# Function part
 def img2text(url):
     image_to_text_model = pipeline("image-to-text", model="Salesforce/blip-image-captioning-base")
     text = image_to_text_model(url)[0]["generated_text"]
     return text
 
-# text2story
 def text2story(text):
-    story_generator = pipeline("text2text-generation", model="google/flan-t5-base")
-    prompt = "Write a short, simple, happy story for children aged 3 to 10 in 50 to 100 words based on this image: " + text
-    story = story_generator(prompt, max_new_tokens=120, repetition_penalty=1.5)
-    story_text = story[0]["generated_text"]
+    story_pipe = pipeline("text-generation", model="pranavpsv/genre-story-generator-v2")
+    prompt = "Write a short story for children based on: " + text
+    story_results = story_pipe(
+        prompt,
+        max_length=120,
+        min_length=60,
+        do_sample=True,
+        temperature=0.9,
+        repetition_penalty=1.5,
+        no_repeat_ngram_size=3
+    )
+    story_text = story_results[0]["generated_text"]
     return story_text
 
-# text2audio
 def text2audio(story_text):
-    tts = gTTS(text=story_text, lang="en")
-    audio_data = BytesIO()
-    tts.write_to_fp(audio_data)
-    audio_data.seek(0)
+    audio_pipe = pipeline("text-to-audio", model="Matthijs/mms-tts-eng")
+    audio_data = audio_pipe(story_text)
     return audio_data
 
-# main part
-st.title("AI Storytelling Application")
+# Main part
+st.set_page_config(page_title="Your Image to Audio Story", page_icon="🦜")
+st.header("Turn Your Image to Audio Story")
 
-uploaded_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("Select an Image...")
 
 if uploaded_file is not None:
-    image = Image.open(uploaded_file).convert("RGB")
 
-    st.image(image)
+    # Save file locally
+    bytes_data = uploaded_file.getvalue()
 
-    if st.button("Generate Story"):
-        image_text = img2text(image)
+    with open(uploaded_file.name, "wb") as file:
+        file.write(bytes_data)
 
-        st.write(image_text)
+    st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
 
-        story_text = text2story(image_text)
+    # Stage 1: Image to Text
+    st.text('Processing img2text...')
 
-        st.write(story_text)
+    scenario = img2text(uploaded_file.name)
 
-        audio_data = text2audio(story_text)
+    st.write(f"**Scenario:** {scenario}")
 
-        st.audio(audio_data, format="audio/mp3")
+    # Stage 2: Text to Story
+    st.text('Generating a story...')
+
+    story = text2story(scenario)
+
+    st.write(f"**Story:** {story}")
+
+    # Stage 3: Story to Audio
+    st.text('Generating audio data...')
+
+    audio_data = text2audio(story)
+
+    # Play button
+    if st.button("Play Audio"):
+
+        audio_array = audio_data["audio"]
+
+        sample_rate = audio_data["sampling_rate"]
+
+        st.audio(audio_array, sample_rate=sample_rate)
