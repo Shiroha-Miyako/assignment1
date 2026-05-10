@@ -10,9 +10,9 @@ def img2text(url):
 
 # text2story
 def text2story(text):
-    story_generator = pipeline("text2text-generation", model="google/flan-t5-base")
-    prompt = "Create a complete children's story with 5 sentences and 50 to 100 words. Do not only describe the picture. Include a beginning, a small problem, and a happy ending. Image description: " + text
-    story = story_generator(prompt, max_new_tokens=160, min_length=60, repetition_penalty=1.3)
+    story_generator = pipeline("text-generation", model="roneneldan/TinyStories-33M")
+    prompt = "Once upon a time, " + text + "."
+    story = story_generator(prompt, max_new_tokens=90, do_sample=True, temperature=0.8, top_p=0.9, repetition_penalty=1.3, no_repeat_ngram_size=3)
     story_text = story[0]["generated_text"]
     return story_text
 
@@ -25,10 +25,12 @@ def text2audio(story_text):
 # main part
 st.set_page_config(page_title="Your Image to Audio Story", page_icon="🦜")
 st.header("Turn Your Image to Audio Story")
+
 uploaded_file = st.file_uploader("Select an Image...")
 
 if uploaded_file is not None:
     bytes_data = uploaded_file.getvalue()
+
     with open(uploaded_file.name, "wb") as file:
         file.write(bytes_data)
 
@@ -36,10 +38,15 @@ if uploaded_file is not None:
 
     if st.button("Generate Story"):
         scenario = img2text(uploaded_file.name)
+
         story = text2story(scenario)
+
         st.write(story)
 
         audio_data = text2audio(story)
+
         audio_array = audio_data["audio"]
+
         sample_rate = audio_data["sampling_rate"]
+
         st.audio(audio_array, sample_rate=sample_rate)
